@@ -2,55 +2,41 @@
 
 Learning project: pay a wallet address via Open Payments, then evolve into 2% cashback rewards.
 
-## Milestone 2 (current)
+## Milestone 3 (current)
 
-React pay form + **Express API scaffold** (no Open Payments calls yet). Vite proxies `/api` → `http://localhost:3001`.
+**Incoming payment on the receiver wallet** — `POST /api/payments` runs Open Payments grant + `incomingPayment.create` (example steps 1–2). Sessions are stored in memory until M4 adds quote and outgoing grant.
 
 ### Prerequisites
 
-Node **20+** (see `web/.nvmrc`). The repo pins **20.15.0** in `package.json` for [Volta](https://volta.sh/).
+Node **20+** (see `web/.nvmrc`). Volta pins **20.15.0** in `package.json`.
 
-If `npm run dev` fails with `crypto.getRandomValues is not a function`, your shell is still on Node 16 — run `node -v`, then switch:
-
-```bash
-volta install node@20   # recommended if you use Volta
-# or: nvm use / fnm use   (from repo root or web/)
-```
-
-### Install and run (web + API)
+Open Payments credentials in repo-root `.env` (see `.env.example`). Readiness:
 
 ```bash
-npm install          # root (concurrently)
-cd web && npm install && cd ..
-cd server && npm install && cd ..
-
-npm run dev          # from repo root — Vite + API together
+curl -s http://localhost:5173/api/open-payments/readiness
 ```
 
-Web only: `npm run dev:web` or `cd web && npm run dev`.
-
-### HALT — secrets before M3
-
-The server starts **without** Open Payments credentials. Before **M3** (real SDK calls), you must:
-
-1. Copy `.env.example` → `.env` in the repo root.
-2. Create a [test wallet](https://wallet.interledger-test.dev/) and [developer keys](https://openpayments.dev/sdk/before-you-begin/).
-3. Set `OP_WALLET_ADDRESS_URL` (HTTPS, no trailing slash), `OP_KEY_ID`, and save the PEM as `private.key` (or set `OP_PRIVATE_KEY_PATH`).
-
-Verify (with `npm run dev` running):
+### Install and run
 
 ```bash
-curl -s http://localhost:5173/api/open-payments/readiness | jq
+npm install && cd web && npm install && cd ../server && npm install && cd ..
+npm run dev
 ```
 
-When `"ready": true`, say **implement M3**. Do **not** commit `.env` or `private.key`.
+Submit the pay form or:
 
-Optional: `VITE_DEFAULT_RECEIVER_URL` in `web/.env` to prefill the receiver field.
+```bash
+curl -s -X POST http://localhost:5173/api/payments \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":"1.00","receiverWalletUrl":"https://wallet.interledger-test.dev/YOUR_USER"}'
+```
 
-## Next steps
+Expect `201` with `sessionId` and `incomingPaymentId`.
 
-- **M3:** `POST /api/payments` — incoming payment on receiver wallet.
-- **M4–M6:** Quote, wallet redirect, complete transfer, success UI.
+### Next steps
+
+- **M4:** Quote + interactive outgoing grant; return `interact.redirect` (**halt** — approve in wallet).
+- **M5–M6:** Callback, complete payment, success UI.
 
 ## References
 

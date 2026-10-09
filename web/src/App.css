@@ -95,8 +95,13 @@
   cursor: pointer;
 }
 
-.pay-button:hover {
+.pay-button:hover:not(:disabled) {
   background: #4338ca;
+}
+
+.pay-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .pay-button:focus-visible {
@@ -110,6 +115,11 @@
   background: #eef2ff;
   border: 1px solid #c7d2fe;
   border-radius: 12px;
+}
+
+.preview-error {
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 .preview h2 {

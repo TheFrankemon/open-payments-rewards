@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { getConfig, getOpenPaymentsReadiness } from "./config.js";
+import { paymentsRouter } from "./routes/payments.js";
 
 const { port, webPublicUrl } = getConfig();
 const app = express();
@@ -15,6 +16,8 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
+
+app.use("/api/payments", paymentsRouter);
 
 app.get("/api/open-payments/readiness", (_req, res) => {
   const readiness = getOpenPaymentsReadiness();

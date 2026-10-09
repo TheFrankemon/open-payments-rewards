@@ -8,7 +8,24 @@ import {
 const defaultReceiver =
   import.meta.env.VITE_DEFAULT_RECEIVER_URL?.trim() ?? "";
 
-type SubmitPreview = PayFormValues & { submittedAt: string };
+type PaymentSessionResponse = {
+  sessionId: string;
+  status: string;
+  amount: {
+    major: string;
+    minor: string;
+    assetCode: string;
+    assetScale: number;
+  };
+  receiverWalletUrl: string;
+  incomingPaymentId: string;
+};
+
+type ApiErrorBody = {
+  error?: string;
+  message?: string;
+  fields?: Partial<Record<keyof PayFormValues, string>>;
+};
 
 export default function PayForm() {
   const [amount, setAmount] = useState("");
@@ -17,7 +34,9 @@ export default function PayForm() {
     Partial<Record<keyof PayFormValues, boolean>>
   >({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [preview, setPreview] = useState<SubmitPreview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [session, setSession] = useState<PaymentSessionResponse | null>(null);
 
   const values: PayFormValues = useMemo(
     () => ({ amount, receiverWalletUrl }),
@@ -31,28 +50,54 @@ export default function PayForm() {
     return errors[field];
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitAttempted(true);
+    setApiError(null);
+    setSession(null);
 
     const nextErrors = validatePayForm(values);
     if (!isValidPayForm(nextErrors)) return;
 
-    setPreview({
-      amount: values.amount.trim(),
-      receiverWalletUrl: values.receiverWalletUrl.trim(),
-      submittedAt: new Date().toISOString(),
-    });
+    setLoading(true);
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: values.amount.trim(),
+          receiverWalletUrl: values.receiverWalletUrl.trim(),
+        }),
+      });
+
+      const body = (await response.json()) as
+        | PaymentSessionResponse
+        | ApiErrorBody;
+
+      if (!response.ok) {
+        const err = body as ApiErrorBody;
+        setApiError(err.message ?? "Payment request failed.");
+        return;
+      }
+
+      setSession(body as PaymentSessionResponse);
+    } catch {
+      setApiError(
+        "Could not reach the API. Run npm run dev from the repo root (web + server).",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="pay-layout">
       <header className="pay-header">
-        <p className="eyebrow">Milestone 1</p>
+        <p className="eyebrow">Milestone 3</p>
         <h1>Pay with Open Payments</h1>
         <p className="lede">
-          Enter an amount and the receiver&apos;s wallet address. The server
-          payment flow will connect in the next commit.
+          Creates an incoming payment on the receiver wallet (Open Payments
+          steps 1–2). Quote and wallet approval come in M4–M5.
         </p>
       </header>
 
@@ -69,6 +114,7 @@ export default function PayForm() {
             onBlur={() => setTouched((t) => ({ ...t, amount: true }))}
             aria-invalid={Boolean(showError("amount"))}
             aria-describedby={showError("amount") ? "amount-error" : undefined}
+            disabled={loading}
           />
           {showError("amount") ? (
             <p id="amount-error" className="field-error" role="alert">
@@ -92,6 +138,7 @@ export default function PayForm() {
             aria-describedby={
               showError("receiverWalletUrl") ? "receiver-error" : undefined
             }
+            disabled={loading}
           />
           {showError("receiverWalletUrl") ? (
             <p id="receiver-error" className="field-error" role="alert">
@@ -100,27 +147,44 @@ export default function PayForm() {
           ) : null}
         </label>
 
-        <button type="submit" className="pay-button">
-          Pay
+        <button type="submit" className="pay-button" disabled={loading}>
+          {loading ? "Creating incoming payment…" : "Pay"}
         </button>
       </form>
 
-      {preview ? (
+      {apiError ? (
+        <section className="preview preview-error" aria-live="polite">
+          <h2>Could not start payment</h2>
+          <p className="hint">{apiError}</p>
+        </section>
+      ) : null}
+
+      {session ? (
         <section className="preview" aria-live="polite">
-          <h2>Ready to send (preview only)</h2>
+          <h2>Incoming payment created</h2>
           <dl>
             <div>
+              <dt>Session</dt>
+              <dd className="mono">{session.sessionId}</dd>
+            </div>
+            <div>
               <dt>Amount</dt>
-              <dd>{preview.amount}</dd>
+              <dd>
+                {session.amount.major} {session.amount.assetCode} (
+                {session.amount.minor} minor units)
+              </dd>
             </div>
             <div>
               <dt>Receiver</dt>
-              <dd className="mono">{preview.receiverWalletUrl}</dd>
+              <dd className="mono">{session.receiverWalletUrl}</dd>
+            </div>
+            <div>
+              <dt>Incoming payment</dt>
+              <dd className="mono">{session.incomingPaymentId}</dd>
             </div>
           </dl>
           <p className="hint">
-            Validation passed. After M2–M6 this will start an Open Payments
-            transfer and open your wallet for approval.
+            M4 will add quote + wallet redirect using this session.
           </p>
         </section>
       ) : null}

@@ -3,7 +3,7 @@ import PaymentReceipt from "./PaymentReceipt";
 import StatusPanel from "./StatusPanel";
 import { parseApiError } from "./paymentUi";
 
-type CompleteResponse = {
+type CompletePaymentResponse = {
   status: string;
   outgoingPaymentId: string;
   amount: {
@@ -13,11 +13,31 @@ type CompleteResponse = {
     assetScale: number;
   };
   receiverWalletUrl: string;
+  buyerWalletUrl?: string;
+  rewards?: {
+    status: string;
+    cashbackMajor?: string;
+    assetCode?: string;
+    outgoingPaymentId?: string;
+    interactRedirect?: string;
+    message?: string;
+  };
+};
+
+type CompleteRewardsResponse = {
+  rewards: {
+    status: string;
+    cashbackMajor?: string;
+    assetCode?: string;
+    outgoingPaymentId?: string;
+  };
 };
 
 export default function PayCallback() {
+  const isRewards = window.location.pathname.includes("rewards-callback");
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("sessionId");
+  const orderId = params.get("orderId");
   const interactRef = params.get("interact_ref");
   const started = useRef(false);
 
@@ -25,17 +45,25 @@ export default function PayCallback() {
   const [error, setError] = useState<ReturnType<typeof parseApiError> | null>(
     null,
   );
-  const [paid, setPaid] = useState<CompleteResponse | null>(null);
+  const [paid, setPaid] = useState<CompletePaymentResponse | null>(null);
+  const [cashback, setCashback] = useState<
+    CompleteRewardsResponse["rewards"] | null
+  >(null);
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
 
-    if (!sessionId) {
+    const idMissing = isRewards ? !orderId : !sessionId;
+    if (idMissing) {
       setError(
         parseApiError(
-          { error: "missing_interact_ref", message: "Missing sessionId in URL." },
-          "Missing sessionId in URL.",
+          {
+            message: isRewards
+              ? "Missing orderId in URL."
+              : "Missing sessionId in URL.",
+          },
+          isRewards ? "Missing orderId in URL." : "Missing sessionId in URL.",
         ),
       );
       setLoading(false);
@@ -57,39 +85,60 @@ export default function PayCallback() {
 
     (async () => {
       try {
-        const res = await fetch(`/api/payments/${sessionId}/complete`, {
+        const url = isRewards
+          ? `/api/rewards/orders/${orderId}/complete-cashback`
+          : `/api/payments/${sessionId}/complete`;
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ interactRef }),
         });
         const body = await res.json();
         if (!res.ok) {
-          setError(parseApiError(body, "Could not complete payment."));
+          setError(
+            parseApiError(
+              body,
+              isRewards
+                ? "Could not complete cashback."
+                : "Could not complete payment.",
+            ),
+          );
           return;
         }
-        setPaid(body as CompleteResponse);
+        if (isRewards) {
+          setCashback((body as CompleteRewardsResponse).rewards);
+        } else {
+          setPaid(body as CompletePaymentResponse);
+        }
       } catch {
         setError({
           title: "Cannot reach API",
-          message: "Could not call complete payment on the server.",
-          hint: "Ensure npm run dev is still running, then use Make another payment.",
+          message: isRewards
+            ? "Could not complete cashback on the server."
+            : "Could not call complete payment on the server.",
         });
       } finally {
         setLoading(false);
       }
     })();
-  }, [sessionId, interactRef]);
+  }, [isRewards, sessionId, orderId, interactRef]);
 
   if (loading) {
     return (
       <div className="pay-layout">
-        <header className="pay-header">
-          <h1>Almost done</h1>
-        </header>
+        {!isRewards ? (
+          <header className="pay-header">
+            <h1>Almost done</h1>
+          </header>
+        ) : null}
         <StatusPanel
           variant="loading"
-          title="Completing payment"
-          message="Continuing grant and creating outgoing payment…"
+          title={isRewards ? "Sending cashback" : "Completing payment"}
+          message={
+            isRewards
+              ? "Creating outgoing payment from the rewards wallet…"
+              : "Continuing grant and creating outgoing payment…"
+          }
         />
       </div>
     );
@@ -98,13 +147,35 @@ export default function PayCallback() {
   if (error) {
     return (
       <div className="pay-layout">
-        <header className="pay-header">
-          <h1>Payment not completed</h1>
-        </header>
+        {!isRewards ? (
+          <header className="pay-header">
+            <h1>Payment not completed</h1>
+          </header>
+        ) : null}
         <StatusPanel variant="error" {...error} />
         <a className="secondary-button secondary-button-block" href="/">
           Back to store
         </a>
+      </div>
+    );
+  }
+
+  if (isRewards && cashback) {
+    return (
+      <div className="pay-layout">
+        <section className="status-panel status-success">
+          <h2>Cashback sent</h2>
+          <p className="status-lede">
+            {cashback.cashbackMajor} {cashback.assetCode ?? "SGD"} from the
+            rewards pool is on its way to your wallet.
+          </p>
+          {cashback.outgoingPaymentId ? (
+            <p className="mono status-hint">{cashback.outgoingPaymentId}</p>
+          ) : null}
+          <a className="secondary-button" href="/">
+            Back to store
+          </a>
+        </section>
       </div>
     );
   }
@@ -115,13 +186,15 @@ export default function PayCallback() {
     <div className="pay-layout">
       <header className="pay-header">
         <h1>Success</h1>
-        <p className="lede">Milestone 1 complete — full Open Payments transfer.</p>
+        <p className="lede">Checkout complete — purchase plus 2% SGD rewards.</p>
       </header>
       <PaymentReceipt
         amountMajor={paid.amount.major}
         assetCode={paid.amount.assetCode}
         receiverWalletUrl={paid.receiverWalletUrl}
         outgoingPaymentId={paid.outgoingPaymentId}
+        buyerWalletUrl={paid.buyerWalletUrl}
+        rewards={paid.rewards}
       />
     </div>
   );

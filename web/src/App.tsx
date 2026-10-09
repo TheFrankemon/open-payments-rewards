@@ -5,6 +5,7 @@ import Storefront from "./Storefront";
 import "./App.css";
 
 function routePage(pathname: string) {
+  if (pathname.startsWith("/pay/rewards-callback")) return "rewards-callback";
   if (pathname.startsWith("/pay/callback")) return "callback";
   if (pathname.startsWith("/checkout")) return "checkout";
   return "store";
@@ -23,7 +24,7 @@ export default function App() {
 
   return (
     <main className="app">
-      {page === "callback" ? (
+      {page === "rewards-callback" || page === "callback" ? (
         <PayCallback />
       ) : page === "checkout" ? (
         <Checkout />

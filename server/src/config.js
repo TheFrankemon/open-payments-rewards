@@ -13,23 +13,41 @@ function resolvePrivateKeyPath(rawPath) {
   return isAbsolute(pathValue) ? pathValue : resolve(repoRoot, pathValue);
 }
 
+function trimUrl(value) {
+  return (value ?? "").replace(/\/$/, "");
+}
+
 export function getConfig() {
+  const openPayments = {
+    walletAddressUrl: trimUrl(process.env.OP_WALLET_ADDRESS_URL),
+    storeReceiverWalletUrl: trimUrl(process.env.OP_STORE_RECEIVER_WALLET_URL),
+    keyId: (process.env.OP_KEY_ID ?? "").trim(),
+    privateKeyPath: resolvePrivateKeyPath(process.env.OP_PRIVATE_KEY_PATH),
+  };
+
+  const rewardsWalletUrl = trimUrl(process.env.OP_REWARDS_WALLET_URL ?? "");
+  const rewardsKeyId = (
+    process.env.OP_REWARDS_KEY_ID ??
+    (rewardsWalletUrl ? openPayments.keyId : "")
+  ).trim();
+  const rewardsPrivateKeyPath = rewardsWalletUrl
+    ? resolvePrivateKeyPath(
+        process.env.OP_REWARDS_PRIVATE_KEY_PATH ??
+          process.env.OP_PRIVATE_KEY_PATH,
+      )
+    : resolvePrivateKeyPath(process.env.OP_REWARDS_PRIVATE_KEY_PATH);
+
   return {
     port: Number(process.env.PORT ?? 3001),
-    webPublicUrl: (process.env.WEB_PUBLIC_URL ?? "http://localhost:5173").replace(
-      /\/$/,
-      "",
+    webPublicUrl: trimUrl(
+      process.env.WEB_PUBLIC_URL ?? "http://localhost:5173",
     ),
-    openPayments: {
-      walletAddressUrl: (process.env.OP_WALLET_ADDRESS_URL ?? "").replace(
-        /\/$/,
-        "",
-      ),
-      storeReceiverWalletUrl: (
-        process.env.OP_STORE_RECEIVER_WALLET_URL ?? ""
-      ).replace(/\/$/, ""),
-      keyId: (process.env.OP_KEY_ID ?? "").trim(),
-      privateKeyPath: resolvePrivateKeyPath(process.env.OP_PRIVATE_KEY_PATH),
+    openPayments,
+    rewards: {
+      walletAddressUrl: rewardsWalletUrl,
+      keyId: rewardsKeyId,
+      privateKeyPath: rewardsPrivateKeyPath,
+      cashbackRateBps: Number(process.env.OP_CASHBACK_RATE_BPS ?? 200),
     },
     repoRoot,
   };
@@ -66,5 +84,23 @@ export function getOpenPaymentsReadiness() {
     ready: Object.values(checks).every(Boolean),
     checks,
     privateKeyPath: openPayments.privateKeyPath,
+  };
+}
+
+/** SGD cashback wallet (fkmn-rewards) — signs outgoing reward payments. */
+export function getRewardsReadiness() {
+  const { rewards } = getConfig();
+  const checks = {
+    OP_REWARDS_WALLET_URL: Boolean(rewards.walletAddressUrl),
+    OP_REWARDS_KEY_ID: Boolean(rewards.keyId),
+    rewardsPrivateKeyFile: existsSync(rewards.privateKeyPath),
+  };
+  const ready = Object.values(checks).every(Boolean);
+  return {
+    ready,
+    checks,
+    message: ready
+      ? "Rewards wallet configured for SGD cashback payout."
+      : "Set OP_REWARDS_WALLET_URL and OP_REWARDS_KEY_ID (and key file) for cashback payout.",
   };
 }

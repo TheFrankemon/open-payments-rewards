@@ -7,6 +7,7 @@ export async function createQuoteForIncomingPayment(
   client,
   payerWalletUrl,
   incomingPaymentId,
+  debitAmount,
 ) {
   const sendingWalletAddress = await client.walletAddress.get({
     url: payerWalletUrl,
@@ -25,16 +26,19 @@ export async function createQuoteForIncomingPayment(
     throw new Error("Quote grant was not finalized (interaction required).");
   }
 
+  const quoteBody = {
+    walletAddress: sendingWalletAddress.id,
+    receiver: incomingPaymentId,
+    method: "ilp",
+  };
+  if (debitAmount) quoteBody.debitAmount = debitAmount;
+
   const quote = await client.quote.create(
     {
       url: sendingWalletAddress.resourceServer,
       accessToken: quoteGrant.access_token.value,
     },
-    {
-      walletAddress: sendingWalletAddress.id,
-      receiver: incomingPaymentId,
-      method: "ilp",
-    },
+    quoteBody,
   );
 
   return { sendingWalletAddress, quote };
@@ -84,39 +88,53 @@ export async function requestInteractiveOutgoingGrant(
   };
 }
 
-export async function completeOutgoingPayment(client, session, interactRef) {
+export async function finalizeOutgoingPayment(
+  client,
+  { walletUrl, grantContinueUri, grantContinueAccessToken, quoteId },
+  interactRef,
+  notFinalizedMessage = "Outgoing grant was not finalized. Approve the grant in your wallet first.",
+) {
   if (!interactRef) {
     throw new Error("Missing interact_ref from wallet redirect.");
   }
 
   const finalizedGrant = await client.grant.continue(
     {
-      url: session.grantContinueUri,
-      accessToken: session.grantContinueAccessToken,
+      url: grantContinueUri,
+      accessToken: grantContinueAccessToken,
     },
     { interact_ref: interactRef },
   );
 
   if (!isFinalizedGrant(finalizedGrant)) {
-    const err = new Error(
-      "Outgoing grant was not finalized. Approve the grant in your wallet first.",
-    );
+    const err = new Error(notFinalizedMessage);
     err.name = "GrantNotFinalizedError";
     throw err;
   }
 
-  const payerWallet = await client.walletAddress.get({
-    url: session.payerWalletUrl,
-  });
+  const wallet = await client.walletAddress.get({ url: walletUrl });
 
   return client.outgoingPayment.create(
     {
-      url: payerWallet.resourceServer,
+      url: wallet.resourceServer,
       accessToken: finalizedGrant.access_token.value,
     },
     {
-      walletAddress: payerWallet.id,
+      walletAddress: wallet.id,
+      quoteId,
+    },
+  );
+}
+
+export async function completeOutgoingPayment(client, session, interactRef) {
+  return finalizeOutgoingPayment(
+    client,
+    {
+      walletUrl: session.payerWalletUrl,
+      grantContinueUri: session.grantContinueUri,
+      grantContinueAccessToken: session.grantContinueAccessToken,
       quoteId: session.quoteId,
     },
+    interactRef,
   );
 }

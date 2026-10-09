@@ -5,3 +5,6 @@ dist
 .env.local
 private.key
 *.db
+rewards.sqlite
+rewards.sqlite-wal
+rewards.sqlite-shm

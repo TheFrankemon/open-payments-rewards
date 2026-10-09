@@ -14,6 +14,8 @@ import {
   getPaymentSession,
   updatePaymentSession,
 } from "../sessions.js";
+import { parseInteractRef } from "../interactRef.js";
+import { processCheckoutRewards } from "../rewards/processCheckoutRewards.js";
 import { validatePaymentBody } from "../validatePaymentBody.js";
 
 export const paymentsRouter = Router();
@@ -157,12 +159,7 @@ paymentsRouter.post("/:sessionId/complete", async (req, res) => {
       });
     }
 
-    const interactRef =
-      typeof req.body?.interactRef === "string"
-        ? req.body.interactRef
-        : typeof req.query?.interact_ref === "string"
-          ? req.query.interact_ref
-          : "";
+    const interactRef = parseInteractRef(req.body, req.query);
 
     const client = await getOpenPaymentsClient();
     const outgoingPayment = await completeOutgoingPayment(
@@ -176,6 +173,18 @@ paymentsRouter.post("/:sessionId/complete", async (req, res) => {
       outgoingPaymentId: outgoingPayment.id,
     });
 
+    let rewards;
+    try {
+      rewards = await processCheckoutRewards(session, outgoingPayment.id);
+    } catch (err) {
+      console.error("Rewards ledger error:", err);
+      rewards = {
+        status: "failed",
+        message:
+          err instanceof Error ? err.message : "Could not record cashback.",
+      };
+    }
+
     return res.json({
       status: "paid",
       sessionId: session.id,
@@ -187,6 +196,8 @@ paymentsRouter.post("/:sessionId/complete", async (req, res) => {
         assetScale: session.assetScale,
       },
       receiverWalletUrl: session.receiverWalletUrl,
+      buyerWalletUrl: session.payerWalletUrl,
+      rewards,
     });
   } catch (err) {
     if (err instanceof Error && err.name === "GrantNotFinalizedError") {

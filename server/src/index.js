@@ -4,9 +4,14 @@ import {
   getCatalogReadiness,
   getConfig,
   getOpenPaymentsReadiness,
+  getRewardsReadiness,
 } from "./config.js";
+import { initRewardsDb } from "./db/rewards.js";
 import { paymentsRouter } from "./routes/payments.js";
+import { rewardsRouter } from "./routes/rewards.js";
 import { storeRouter } from "./routes/store.js";
+
+initRewardsDb();
 
 const { port, webPublicUrl } = getConfig();
 const app = express();
@@ -24,6 +29,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/payments", paymentsRouter);
 app.use("/api/store", storeRouter);
+app.use("/api/rewards", rewardsRouter);
 
 app.get("/api/open-payments/readiness", (_req, res) => {
   const readiness = getOpenPaymentsReadiness();
@@ -50,5 +56,9 @@ app.listen(port, () => {
   if (!catalog.ready) {
     console.log(`Catalog: ${catalog.message}`);
     console.log(`Check: GET http://localhost:${port}/api/store`);
+  }
+  const rewards = getRewardsReadiness();
+  if (!rewards.ready) {
+    console.log(`Rewards: ${rewards.message}`);
   }
 });

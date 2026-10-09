@@ -1,9 +1,26 @@
 :root {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #0f172a;
-  background-color: #f1f5f9;
+  --cp-yellow: #fcee0a;
+  --cp-cyan: #00f0ff;
+  --cp-red: #ff003c;
+  --cp-magenta: #ff2a6d;
+  --cp-green: #39ff14;
+  --cp-bg: #050608;
+  --cp-bg-mid: #0a0e14;
+  --cp-surface: rgba(10, 14, 22, 0.92);
+  --cp-surface-hover: rgba(18, 24, 36, 0.95);
+  --cp-border: rgba(252, 238, 10, 0.45);
+  --cp-border-dim: rgba(0, 240, 255, 0.25);
+  --cp-text: #e8eef5;
+  --cp-muted: #8b98a8;
+  --cp-glow-yellow: 0 0 12px rgba(252, 238, 10, 0.35);
+  --cp-glow-cyan: 0 0 14px rgba(0, 240, 255, 0.25);
+  --font-display: "Orbitron", system-ui, sans-serif;
+  --font-body: "Rajdhani", system-ui, sans-serif;
+  font-family: var(--font-body);
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--cp-text);
+  background-color: var(--cp-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,8 +35,29 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(255, 0, 60, 0.12), transparent),
+    radial-gradient(ellipse 80% 50% at 100% 50%, rgba(0, 240, 255, 0.06), transparent),
+    linear-gradient(180deg, var(--cp-bg-mid) 0%, var(--cp-bg) 45%, #020203 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.5) 2px,
+    rgba(0, 0, 0, 0.5) 4px
+  );
+  z-index: 9999;
 }
 
 #root {
   min-height: 100vh;
+  position: relative;
 }

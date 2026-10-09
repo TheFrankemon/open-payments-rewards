@@ -34,7 +34,9 @@ type CompleteRewardsResponse = {
 };
 
 export default function PayCallback() {
-  const isRewards = window.location.pathname.includes("rewards-callback");
+  const pathname = window.location.pathname;
+  const isGrantSetup = pathname.includes("rewards-grant-setup");
+  const isRewards = pathname.includes("rewards-callback");
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("sessionId");
   const orderId = params.get("orderId");
@@ -54,20 +56,22 @@ export default function PayCallback() {
     if (started.current) return;
     started.current = true;
 
-    const idMissing = isRewards ? !orderId : !sessionId;
-    if (idMissing) {
-      setError(
-        parseApiError(
-          {
-            message: isRewards
-              ? "Missing orderId in URL."
-              : "Missing sessionId in URL.",
-          },
-          isRewards ? "Missing orderId in URL." : "Missing sessionId in URL.",
-        ),
-      );
-      setLoading(false);
-      return;
+    if (!isGrantSetup) {
+      const idMissing = isRewards ? !orderId : !sessionId;
+      if (idMissing) {
+        setError(
+          parseApiError(
+            {
+              message: isRewards
+                ? "Missing orderId in URL."
+                : "Missing sessionId in URL.",
+            },
+            isRewards ? "Missing orderId in URL." : "Missing sessionId in URL.",
+          ),
+        );
+        setLoading(false);
+        return;
+      }
     }
     if (!interactRef) {
       setError(
@@ -85,9 +89,11 @@ export default function PayCallback() {
 
     (async () => {
       try {
-        const url = isRewards
-          ? `/api/rewards/orders/${orderId}/complete-cashback`
-          : `/api/payments/${sessionId}/complete`;
+        const url = isGrantSetup
+          ? "/api/rewards/standing-grant/complete"
+          : isRewards
+            ? `/api/rewards/orders/${orderId}/complete-cashback`
+            : `/api/payments/${sessionId}/complete`;
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,14 +104,18 @@ export default function PayCallback() {
           setError(
             parseApiError(
               body,
-              isRewards
-                ? "Could not complete cashback."
-                : "Could not complete payment.",
+              isGrantSetup
+                ? "Could not save auto-cashback grant."
+                : isRewards
+                  ? "Could not complete cashback."
+                  : "Could not complete payment.",
             ),
           );
           return;
         }
-        if (isRewards) {
+        if (isGrantSetup) {
+          setCashback({ status: "paid", assetCode: "SGD" });
+        } else if (isRewards) {
           setCashback((body as CompleteRewardsResponse).rewards);
         } else {
           setPaid(body as CompletePaymentResponse);
@@ -113,31 +123,41 @@ export default function PayCallback() {
       } catch {
         setError({
           title: "Cannot reach API",
-          message: isRewards
-            ? "Could not complete cashback on the server."
-            : "Could not call complete payment on the server.",
+          message: isGrantSetup
+            ? "Could not save auto-cashback grant on the server."
+            : isRewards
+              ? "Could not complete cashback on the server."
+              : "Could not call complete payment on the server.",
         });
       } finally {
         setLoading(false);
       }
     })();
-  }, [isRewards, sessionId, orderId, interactRef]);
+  }, [isGrantSetup, isRewards, sessionId, orderId, interactRef]);
 
   if (loading) {
     return (
       <div className="pay-layout">
-        {!isRewards ? (
+        {!isRewards && !isGrantSetup ? (
           <header className="pay-header">
             <h1>Almost done</h1>
           </header>
         ) : null}
         <StatusPanel
           variant="loading"
-          title={isRewards ? "Sending cashback" : "Completing payment"}
+          title={
+            isGrantSetup
+              ? "Saving auto-cashback grant"
+              : isRewards
+                ? "Sending cashback"
+                : "Completing payment"
+          }
           message={
-            isRewards
-              ? "Creating outgoing payment from the rewards wallet…"
-              : "Continuing grant and creating outgoing payment…"
+            isGrantSetup
+              ? "Finalizing standing grant on the rewards wallet…"
+              : isRewards
+                ? "Creating outgoing payment from the rewards wallet…"
+                : "Continuing grant and creating outgoing payment…"
           }
         />
       </div>
@@ -160,20 +180,21 @@ export default function PayCallback() {
     );
   }
 
-  if (isRewards && cashback) {
+  if ((isRewards || isGrantSetup) && cashback) {
     return (
       <div className="pay-layout">
         <section className="status-panel status-success">
-          <h2>Cashback sent</h2>
+          <h2>{isGrantSetup ? "Auto cashback enabled" : "Cashback sent"}</h2>
           <p className="status-lede">
-            {cashback.cashbackMajor} {cashback.assetCode ?? "SGD"} from the
-            rewards pool is on its way to your wallet.
+            {isGrantSetup
+              ? "Future checkouts will pay 2% SGD cashback without a second wallet approval (within grant limits)."
+              : `${cashback.cashbackMajor} ${cashback.assetCode ?? "SGD"} from the rewards pool is on its way to your wallet.`}
           </p>
           {cashback.outgoingPaymentId ? (
             <p className="mono status-hint">{cashback.outgoingPaymentId}</p>
           ) : null}
-          <a className="secondary-button" href="/">
-            Back to store
+          <a className="secondary-button" href={isGrantSetup ? "/rewards" : "/"}>
+            {isGrantSetup ? "Back to rewards" : "Back to store"}
           </a>
         </section>
       </div>

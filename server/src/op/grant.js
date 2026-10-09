@@ -1,6 +1,7 @@
 import {
   isFinalizedGrant,
   isPendingGrant,
+  OpenPaymentsClientError,
 } from "@interledger/open-payments";
 
 export async function createQuoteForIncomingPayment(
@@ -44,10 +45,109 @@ export async function createQuoteForIncomingPayment(
   return { sendingWalletAddress, quote };
 }
 
+function outgoingPaymentGrantAccess(sendingWalletAddress, quote) {
+  return {
+    access_token: {
+      access: [
+        {
+          type: "outgoing-payment",
+          actions: ["read", "create"],
+          limits: { debitAmount: quote.debitAmount },
+          identifier: sendingWalletAddress.id,
+        },
+      ],
+    },
+  };
+}
+
+function outgoingGrantNeedsInteraction(err) {
+  if (!(err instanceof OpenPaymentsClientError)) return false;
+  const text = `${err.description ?? ""} ${err.message ?? ""}`.toLowerCase();
+  return text.includes("interact");
+}
+
+/** Non-interactive grant when the auth server auto-approves (R4). Returns null if interaction is required. */
+export async function requestNonInteractiveOutgoingGrant(
+  client,
+  sendingWalletAddress,
+  quote,
+) {
+  let outgoingPaymentGrant;
+  try {
+    outgoingPaymentGrant = await client.grant.request(
+      { url: sendingWalletAddress.authServer },
+      outgoingPaymentGrantAccess(sendingWalletAddress, quote),
+    );
+  } catch (err) {
+    if (outgoingGrantNeedsInteraction(err)) return null;
+    throw err;
+  }
+
+  if (!isFinalizedGrant(outgoingPaymentGrant)) {
+    return null;
+  }
+
+  return outgoingPaymentGrant.access_token.value;
+}
+
+export async function createOutgoingPaymentFromGrant(
+  client,
+  sendingWalletAddress,
+  quoteId,
+  accessToken,
+) {
+  return client.outgoingPayment.create(
+    {
+      url: sendingWalletAddress.resourceServer,
+      accessToken,
+    },
+    {
+      walletAddress: sendingWalletAddress.id,
+      quoteId,
+    },
+  );
+}
+
 export async function requestInteractiveOutgoingGrant(
   client,
   sendingWalletAddress,
   quote,
+  finishRedirectUri,
+) {
+  const interactNonce = crypto.randomUUID();
+
+  const outgoingPaymentGrant = await client.grant.request(
+    { url: sendingWalletAddress.authServer },
+    {
+      ...outgoingPaymentGrantAccess(sendingWalletAddress, quote),
+      interact: {
+        start: ["redirect"],
+        finish: {
+          method: "redirect",
+          uri: finishRedirectUri,
+          nonce: interactNonce,
+        },
+      },
+    },
+  );
+
+  if (!isPendingGrant(outgoingPaymentGrant) || !outgoingPaymentGrant.interact?.redirect) {
+    throw new Error("Expected pending outgoing grant with interact.redirect.");
+  }
+
+  return {
+    interactRedirect: outgoingPaymentGrant.interact.redirect,
+    interactNonce,
+    continueUri: outgoingPaymentGrant.continue.uri,
+    continueAccessToken: outgoingPaymentGrant.continue.access_token.value,
+  };
+}
+
+/** One-time interactive grant with interval + debit cap (reuse token for many cashbacks). */
+export async function requestStandingInteractiveOutgoingGrant(
+  client,
+  sendingWalletAddress,
+  limits,
   finishRedirectUri,
 ) {
   const interactNonce = crypto.randomUUID();
@@ -60,7 +160,7 @@ export async function requestInteractiveOutgoingGrant(
           {
             type: "outgoing-payment",
             actions: ["read", "create"],
-            limits: { debitAmount: quote.debitAmount },
+            limits,
             identifier: sendingWalletAddress.id,
           },
         ],
@@ -77,7 +177,7 @@ export async function requestInteractiveOutgoingGrant(
   );
 
   if (!isPendingGrant(outgoingPaymentGrant) || !outgoingPaymentGrant.interact?.redirect) {
-    throw new Error("Expected pending outgoing grant with interact.redirect.");
+    throw new Error("Expected pending standing grant with interact.redirect.");
   }
 
   return {

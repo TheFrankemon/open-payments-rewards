@@ -90,12 +90,21 @@ export default function PaymentReceipt({
         ) : null}
       </dl>
       {rewards?.status === "awaiting_approval" && rewards.interactRedirect ? (
-        <a
-          className="pay-button secondary-button-block"
-          href={rewards.interactRedirect}
-        >
-          Approve SGD cashback in wallet
-        </a>
+        <>
+          <a
+            className="pay-button secondary-button-block"
+            href={rewards.interactRedirect}
+          >
+            Approve SGD cashback in wallet
+          </a>
+          <a
+            className="secondary-button secondary-button-inline"
+            href="/rewards"
+            onClick={onSpaLinkClick}
+          >
+            Or enable auto cashback (one-time setup)
+          </a>
+        </>
       ) : null}
       <a
         className="secondary-button secondary-button-inline"

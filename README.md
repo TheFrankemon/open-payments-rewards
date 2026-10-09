@@ -29,7 +29,7 @@ Edit **[`catalog.json`](catalog.json)** at the repo root. Served at `GET /api/st
 - `GET /api/rewards/summary` · `GET /api/rewards/history` — same data split  
 - Ledger file: `rewards.sqlite` at repo root (gitignored)
 
-Cashback is **2% of the cart total in SGD**, paid from `fkmn-rewards`. On testnet the rewards wallet needs a **second wallet approval** after checkout — use **Approve SGD cashback in wallet** on the receipt, then return via `/pay/rewards-callback`.
+Cashback is **2% of the cart total in SGD**, paid from `fkmn-rewards`. On testnet, outgoing grants always need wallet consent — **R4** stores a **standing grant** after you click **Enable auto cashback** on `/rewards` (rewards wallet, once). Later checkouts pay cashback without a second approval. Without that setup, each order can still use **Approve SGD cashback in wallet** on the receipt.
 
 ### Run
 

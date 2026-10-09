@@ -15,7 +15,7 @@ import { getRewardsOpenPaymentsClient } from "../op/rewardsClient.js";
 import { computeCashbackMinor, minorToMajorString } from "./cashbackMath.js";
 
 const CASHBACK_APPROVE_MSG =
-  "Approve sending SGD cashback from the rewards wallet (one extra wallet step on testnet).";
+  "Per-order wallet approval (enable auto cashback once on the Rewards page to skip this).";
 
 function opErrorMessage(err) {
   if (err instanceof OpenPaymentsClientError) {
@@ -128,6 +128,15 @@ export async function processCheckoutRewards(session, outgoingPaymentId) {
       wa.assetCode,
       wa.assetScale,
     );
+
+    if (payout.status === "paid") {
+      updateCashbackEntry(ledgerId, {
+        status: "paid",
+        payout_outgoing_payment_id: payout.outgoingPaymentId,
+        error_message: null,
+      });
+      return rowToClientPayload(getCashbackForOrder(session.id));
+    }
 
     if (payout.status === "awaiting_approval") {
       updateCashbackEntry(ledgerId, {

@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getConfig } from "../config.js";
+import { initStandingGrantTables } from "./standingGrant.js";
 
 let db;
 
@@ -47,6 +48,7 @@ export function initRewardsDb() {
     CREATE INDEX IF NOT EXISTS idx_cashback_buyer ON cashback_ledger(buyer_wallet_url);
   `);
   migrateCashbackLedger(db);
+  initStandingGrantTables();
   return db;
 }
 

@@ -24,9 +24,15 @@ type HistoryEntry = {
   created_at: string;
 };
 
+type StandingGrantStatus = {
+  configured: boolean;
+  source: "env" | "database" | null;
+};
+
 type RewardsPayload = {
   buyerWalletUrl: string;
   totals: AssetTotals[];
+  standingGrant?: StandingGrantStatus;
   entries: HistoryEntry[];
 };
 
@@ -49,6 +55,8 @@ export default function Rewards() {
     null,
   );
   const [data, setData] = useState<RewardsPayload | null>(null);
+  const [grantSetupError, setGrantSetupError] = useState<string | null>(null);
+  const [grantSetupLoading, setGrantSetupLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/rewards")
@@ -94,6 +102,31 @@ export default function Rewards() {
   }
 
   const primary = data?.totals[0];
+  const standingGrant = data?.standingGrant;
+
+  async function enableAutoCashback() {
+    setGrantSetupError(null);
+    setGrantSetupLoading(true);
+    try {
+      const res = await fetch("/api/rewards/standing-grant", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        setGrantSetupError(
+          typeof body.message === "string"
+            ? body.message
+            : "Could not start rewards-wallet setup.",
+        );
+        return;
+      }
+      if (typeof body.interactRedirect === "string") {
+        window.location.assign(body.interactRedirect);
+      }
+    } catch {
+      setGrantSetupError("Could not reach the API.");
+    } finally {
+      setGrantSetupLoading(false);
+    }
+  }
 
   return (
     <div className="pay-layout store-layout">
@@ -111,6 +144,35 @@ export default function Rewards() {
           Buyer wallet: <span className="mono">{data.buyerWalletUrl}</span>
         </p>
       ) : null}
+
+      {standingGrant?.configured ? (
+        <p className="status-hint checkout-receiver">
+          Auto cashback: on
+          {standingGrant.source === "env" ? " (token from .env)" : ""}.
+        </p>
+      ) : (
+        <section className="status-panel" aria-label="Auto cashback setup">
+          <h2 className="checkout-total">Auto cashback (R4)</h2>
+          <p className="product-desc">
+            Testnet requires wallet consent for outgoing payments. Approve once
+            for the rewards pool wallet; later checkouts send 2% SGD without a
+            second approval.
+          </p>
+          {grantSetupError ? (
+            <p className="product-desc">{grantSetupError}</p>
+          ) : null}
+          <button
+            type="button"
+            className="pay-button"
+            disabled={grantSetupLoading}
+            onClick={() => void enableAutoCashback()}
+          >
+            {grantSetupLoading
+              ? "Opening wallet…"
+              : "Enable auto cashback (rewards wallet)"}
+          </button>
+        </section>
+      )}
 
       {primary ? (
         <section className="rewards-totals" aria-label="Cashback totals">

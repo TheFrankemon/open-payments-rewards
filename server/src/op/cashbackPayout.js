@@ -1,9 +1,16 @@
+import { OpenPaymentsClientError } from "@interledger/open-payments";
 import { getConfig } from "../config.js";
 import { minorToMajorString } from "../rewards/cashbackMath.js";
 import {
+  getStandingGrantAccessToken,
+  invalidateStoredStandingGrant,
+} from "../rewards/standingGrantSetup.js";
+import {
+  createOutgoingPaymentFromGrant,
   createQuoteForIncomingPayment,
   finalizeOutgoingPayment,
   requestInteractiveOutgoingGrant,
+  requestNonInteractiveOutgoingGrant,
 } from "./grant.js";
 import { createOpenIncomingOnReceiver } from "./incomingPayment.js";
 
@@ -31,6 +38,51 @@ export async function startCashbackPayout(
     incomingPayment.id,
     { value: cashbackMinor, assetCode, assetScale },
   );
+
+  const autoAccessToken = await requestNonInteractiveOutgoingGrant(
+    rewardsClient,
+    sendingWalletAddress,
+    quote,
+  );
+
+  if (autoAccessToken) {
+    const outgoingPayment = await createOutgoingPaymentFromGrant(
+      rewardsClient,
+      sendingWalletAddress,
+      quote.id,
+      autoAccessToken,
+    );
+    return {
+      status: "paid",
+      outgoingPaymentId: outgoingPayment.id,
+      cashbackMajor: minorToMajorString(cashbackMinor, assetScale),
+      assetCode,
+    };
+  }
+
+  const standingToken = getStandingGrantAccessToken();
+  if (standingToken) {
+    try {
+      const outgoingPayment = await createOutgoingPaymentFromGrant(
+        rewardsClient,
+        sendingWalletAddress,
+        quote.id,
+        standingToken,
+      );
+      return {
+        status: "paid",
+        outgoingPaymentId: outgoingPayment.id,
+        cashbackMajor: minorToMajorString(cashbackMinor, assetScale),
+        assetCode,
+      };
+    } catch (err) {
+      if (err instanceof OpenPaymentsClientError) {
+        invalidateStoredStandingGrant();
+      } else {
+        throw err;
+      }
+    }
+  }
 
   const grant = await requestInteractiveOutgoingGrant(
     rewardsClient,

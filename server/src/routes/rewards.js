@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { OpenPaymentsClientError } from "@interledger/open-payments";
-import { getConfig } from "../config.js";
+import { getConfig, getRewardsReadiness } from "../config.js";
 import {
   getBuyerCashbackHistory,
   getBuyerRewardsSummary,
 } from "../db/rewards.js";
 import { parseInteractRef } from "../interactRef.js";
 import { completeOrderCashback } from "../rewards/processCheckoutRewards.js";
-
+import {
+  completeStandingGrantSetup,
+  getStandingGrantStatus,
+  startStandingGrantSetup,
+} from "../rewards/standingGrantSetup.js";
 export const rewardsRouter = Router();
 
 function buyerWallet(req) {
@@ -29,12 +33,86 @@ function requireBuyerWallet(req, res) {
   return wallet;
 }
 
+rewardsRouter.get("/standing-grant", (_req, res) => {
+  if (!getRewardsReadiness().ready) {
+    return res.status(503).json({
+      error: "rewards_not_configured",
+      message: "Configure OP_REWARDS_* before standing grant setup.",
+    });
+  }
+  return res.json(getStandingGrantStatus());
+});
+
+rewardsRouter.post("/standing-grant", async (_req, res) => {
+  if (!getRewardsReadiness().ready) {
+    return res.status(503).json({
+      error: "rewards_not_configured",
+      message: "Configure OP_REWARDS_* before standing grant setup.",
+    });
+  }
+  try {
+    const body = await startStandingGrantSetup();
+    return res.json(body);
+  } catch (err) {
+    if (err instanceof OpenPaymentsClientError) {
+      return res.status(502).json({
+        error: "open_payments_error",
+        message: err.description || err.message,
+      });
+    }
+    console.error(err);
+    return res.status(500).json({
+      error: "internal_error",
+      message: err instanceof Error ? err.message : "Unexpected error.",
+    });
+  }
+});
+
+rewardsRouter.post("/standing-grant/complete", async (req, res) => {
+  const interactRef = parseInteractRef(req.body, req.query);
+  if (!interactRef) {
+    return res.status(400).json({
+      error: "missing_interact_ref",
+      message: "Missing interact_ref from wallet redirect.",
+    });
+  }
+  try {
+    const standingGrant = await completeStandingGrantSetup(interactRef);
+    return res.json({ standingGrant });
+  } catch (err) {
+    if (err instanceof Error && err.name === "NotFoundError") {
+      return res.status(404).json({
+        error: "standing_grant_not_pending",
+        message: err.message,
+      });
+    }
+    if (err instanceof Error && err.name === "GrantNotFinalizedError") {
+      return res.status(409).json({
+        error: "grant_not_finalized",
+        message: err.message,
+      });
+    }
+    if (err instanceof OpenPaymentsClientError) {
+      return res.status(502).json({
+        error: "open_payments_error",
+        message: err.description || err.message,
+      });
+    }
+    console.error(err);
+    return res.status(500).json({
+      error: "internal_error",
+      message: err instanceof Error ? err.message : "Unexpected error.",
+    });
+  }
+});
+
 rewardsRouter.get("/", (req, res) => {
   const wallet = requireBuyerWallet(req, res);
   if (!wallet) return;
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   return res.json({
     ...getBuyerRewardsSummary(wallet),
+    standingGrant: getStandingGrantStatus(),
     entries: getBuyerCashbackHistory(wallet, limit).filter(
       (e) => e.status !== "skipped",
     ),

@@ -1,9 +1,13 @@
 import { FormEvent, useMemo, useState } from "react";
+import StatusPanel from "./StatusPanel";
+import { parseApiError } from "./paymentUi";
 import {
   isValidPayForm,
   PayFormValues,
   validatePayForm,
 } from "./validation";
+
+type PayPhase = "idle" | "incoming" | "grant" | "redirect";
 
 export default function PayForm() {
   const [amount, setAmount] = useState("");
@@ -12,8 +16,12 @@ export default function PayForm() {
     Partial<Record<keyof PayFormValues, boolean>>
   >({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<PayPhase>("idle");
+  const [flowError, setFlowError] = useState<ReturnType<
+    typeof parseApiError
+  > | null>(null);
+
+  const loading = phase !== "idle";
 
   const values: PayFormValues = useMemo(
     () => ({ amount, receiverWalletUrl }),
@@ -27,16 +35,21 @@ export default function PayForm() {
     return errors[field];
   }
 
+  function clearFlowError() {
+    setFlowError(null);
+    setPhase("idle");
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitAttempted(true);
-    setApiError(null);
+    setFlowError(null);
 
     const nextErrors = validatePayForm(values);
     if (!isValidPayForm(nextErrors)) return;
 
-    setLoading(true);
     try {
+      setPhase("incoming");
       const createRes = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,38 +60,62 @@ export default function PayForm() {
       });
       const createBody = await createRes.json();
       if (!createRes.ok) {
-        setApiError(createBody.message ?? "Could not create incoming payment.");
+        setFlowError(
+          parseApiError(createBody, "Could not create incoming payment."),
+        );
+        setPhase("idle");
         return;
       }
 
+      setPhase("grant");
       const grantRes = await fetch(
         `/api/payments/${createBody.sessionId}/outgoing-grant`,
         { method: "POST" },
       );
       const grantBody = await grantRes.json();
       if (!grantRes.ok) {
-        setApiError(grantBody.message ?? "Could not start wallet approval.");
+        setFlowError(
+          parseApiError(grantBody, "Could not start wallet approval."),
+        );
+        setPhase("idle");
         return;
       }
 
+      setPhase("redirect");
       window.location.assign(grantBody.interactRedirect);
     } catch {
-      setApiError(
-        "Could not reach the API. Run npm run dev from the repo root (web + server).",
-      );
-    } finally {
-      setLoading(false);
+      setFlowError({
+        title: "Cannot reach API",
+        message: "Run npm run dev from the repo root (web + server).",
+        hint: "Both Vite and Express must be running for Pay to work.",
+      });
+      setPhase("idle");
     }
   }
+
+  const loadingCopy =
+    phase === "incoming"
+      ? {
+          title: "Step 1 of 2",
+          message: "Creating incoming payment on the receiver wallet…",
+        }
+      : phase === "grant"
+        ? {
+            title: "Step 2 of 2",
+            message: "Quoting SGD debit and preparing wallet approval…",
+          }
+        : {
+            title: "Redirecting",
+            message: "Opening your wallet to approve the grant…",
+          };
 
   return (
     <div className="pay-layout">
       <header className="pay-header">
-        <p className="eyebrow">Milestone 4</p>
         <h1>Pay with Open Payments</h1>
         <p className="lede">
-          Creates an incoming payment, quotes the debit from this app&apos;s
-          wallet, then redirects you to approve the outgoing grant.
+          Send SGD to any receiver wallet address. You will approve the outgoing
+          payment in this app&apos;s test wallet.
         </p>
       </header>
 
@@ -136,15 +173,20 @@ export default function PayForm() {
         </label>
 
         <button type="submit" className="pay-button" disabled={loading}>
-          {loading ? "Working…" : "Pay"}
+          {loading ? "Processing…" : "Pay"}
         </button>
       </form>
 
-      {apiError ? (
-        <section className="preview preview-error" aria-live="polite">
-          <h2>Could not start payment</h2>
-          <p className="hint">{apiError}</p>
-        </section>
+      {loading ? (
+        <StatusPanel variant="loading" {...loadingCopy} />
+      ) : null}
+
+      {flowError ? (
+        <StatusPanel
+          variant="error"
+          {...flowError}
+          onRetry={clearFlowError}
+        />
       ) : null}
     </div>
   );

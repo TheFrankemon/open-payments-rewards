@@ -129,33 +129,53 @@
   outline-offset: 2px;
 }
 
-.preview {
+.status-panel {
   margin-top: 1.25rem;
   padding: 1.25rem 1.5rem;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
   border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
-.preview-error {
-  background: #fef2f2;
-  border-color: #fecaca;
-}
-
-.preview h2 {
-  margin: 0 0 0.75rem;
+.status-panel h2 {
+  margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.preview dl {
+.status-lede {
   margin: 0;
+  font-size: 0.9375rem;
+  color: #475569;
+}
+
+.status-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.status-loading {
+  background: #f8fafc;
+}
+
+.status-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.status-success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.receipt-dl {
+  margin: 1rem 0 0;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
-.preview dt {
+.receipt-dl dt {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -163,19 +183,57 @@
   color: #64748b;
 }
 
-.preview dd {
+.receipt-dl dd {
   margin: 0.15rem 0 0;
   font-size: 0.95rem;
 }
 
-.preview .mono {
+.mono {
   word-break: break-all;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.85rem;
 }
 
-.preview .hint {
-  margin: 1rem 0 0;
-  font-size: 0.8125rem;
-  color: #475569;
+.secondary-button {
+  display: inline-block;
+  margin-top: 1rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.secondary-button-block {
+  display: block;
+  text-align: center;
+}
+
+.secondary-button:hover {
+  background: #f8fafc;
+}
+
+.status-panel .secondary-button {
+  margin-top: 1rem;
+}
+
+.spinner {
+  margin-top: 1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid #cbd5e1;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

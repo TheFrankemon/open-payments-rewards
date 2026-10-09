@@ -1,0 +1,22 @@
+{
+  "name": "open-payments-rewards-server",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "volta": {
+    "node": "20.15.0"
+  },
+  "scripts": {
+    "predev": "node ../scripts/check-node.mjs",
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.0.1"
+  }
+}

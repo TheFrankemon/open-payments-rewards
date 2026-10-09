@@ -2,9 +2,9 @@
 
 Learning project: pay a wallet address via Open Payments, then evolve into 2% cashback rewards.
 
-## Milestone 1 (current)
+## Milestone 2 (current)
 
-React pay form only — amount + receiver wallet URL + Pay (client validation; API wired in later commits).
+React pay form + **Express API scaffold** (no Open Payments calls yet). Vite proxies `/api` → `http://localhost:3001`.
 
 ### Prerequisites
 
@@ -17,21 +17,43 @@ volta install node@20   # recommended if you use Volta
 # or: nvm use / fnm use   (from repo root or web/)
 ```
 
-### Run the web app
+### Install and run (web + API)
 
 ```bash
-cd web
-npm install
-npm run dev
+npm install          # root (concurrently)
+cd web && npm install && cd ..
+cd server && npm install && cd ..
+
+npm run dev          # from repo root — Vite + API together
 ```
 
-Or from the repo root: `npm run dev` (after `npm install` in `web/`).
+Web only: `npm run dev:web` or `cd web && npm run dev`.
 
-Optional: set `VITE_DEFAULT_RECEIVER_URL` in `web/.env` to prefill the receiver field.
+### HALT — secrets before M3
+
+The server starts **without** Open Payments credentials. Before **M3** (real SDK calls), you must:
+
+1. Copy `.env.example` → `.env` in the repo root.
+2. Create a [test wallet](https://wallet.interledger-test.dev/) and [developer keys](https://openpayments.dev/sdk/before-you-begin/).
+3. Set `OP_WALLET_ADDRESS_URL` (HTTPS, no trailing slash), `OP_KEY_ID`, and save the PEM as `private.key` (or set `OP_PRIVATE_KEY_PATH`).
+
+Verify (with `npm run dev` running):
+
+```bash
+curl -s http://localhost:5173/api/open-payments/readiness | jq
+```
+
+When `"ready": true`, say **implement M3**. Do **not** commit `.env` or `private.key`.
+
+Optional: `VITE_DEFAULT_RECEIVER_URL` in `web/.env` to prefill the receiver field.
 
 ## Next steps
 
-- **M2:** Express API + `.env` for Open Payments keys (halt until you add secrets).
-- **M3–M6:** Full transfer flow + wallet redirect.
+- **M3:** `POST /api/payments` — incoming payment on receiver wallet.
+- **M4–M6:** Quote, wallet redirect, complete transfer, success UI.
 
-See [Open Payments test wallet](https://wallet.interledger-test.dev/) and [SDK setup](https://openpayments.dev/sdk/before-you-begin/).
+## References
+
+- [Open Payments test wallet](https://wallet.interledger-test.dev/)
+- [SDK setup](https://openpayments.dev/sdk/before-you-begin/)
+- [Payment example flow](https://github.com/interledger/open-payments-example/blob/main/index.js)

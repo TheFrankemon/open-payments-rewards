@@ -10,7 +10,13 @@
     "node": "20.15.0"
   },
   "scripts": {
-    "dev": "npm run dev --prefix web",
+    "predev": "node scripts/check-node.mjs",
+    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
+    "dev:web": "npm run dev --prefix web",
+    "dev:server": "npm run dev --prefix server",
     "build": "npm run build --prefix web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

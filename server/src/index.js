@@ -1,7 +1,12 @@
 import cors from "cors";
 import express from "express";
-import { getConfig, getOpenPaymentsReadiness } from "./config.js";
+import {
+  getCatalogReadiness,
+  getConfig,
+  getOpenPaymentsReadiness,
+} from "./config.js";
 import { paymentsRouter } from "./routes/payments.js";
+import { storeRouter } from "./routes/store.js";
 
 const { port, webPublicUrl } = getConfig();
 const app = express();
@@ -18,6 +23,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/payments", paymentsRouter);
+app.use("/api/store", storeRouter);
 
 app.get("/api/open-payments/readiness", (_req, res) => {
   const readiness = getOpenPaymentsReadiness();
@@ -39,5 +45,10 @@ app.listen(port, () => {
       "Open Payments: not configured yet (expected until you add secrets).",
     );
     console.log(`Check: GET http://localhost:${port}/api/open-payments/readiness`);
+  }
+  const catalog = getCatalogReadiness();
+  if (!catalog.ready) {
+    console.log(`Catalog: ${catalog.message}`);
+    console.log(`Check: GET http://localhost:${port}/api/store`);
   }
 });

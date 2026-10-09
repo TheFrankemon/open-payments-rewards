@@ -89,7 +89,7 @@ export default function PayCallback() {
         <StatusPanel
           variant="loading"
           title="Completing payment"
-          message="Continuing grant and creating outgoing payment in SGD…"
+          message="Continuing grant and creating outgoing payment…"
         />
       </div>
     );
@@ -103,7 +103,7 @@ export default function PayCallback() {
         </header>
         <StatusPanel variant="error" {...error} />
         <a className="secondary-button secondary-button-block" href="/">
-          Back to Pay
+          Back to store
         </a>
       </div>
     );

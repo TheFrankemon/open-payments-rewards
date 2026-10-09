@@ -43,6 +43,24 @@ export function parseApiError(
         message,
         hint: "Copy .env.example to .env and add your test wallet credentials.",
       };
+    case "catalog_not_configured":
+      return {
+        title: "Catalog missing",
+        message,
+        hint: "Add catalog.json at the repo root with a products array.",
+      };
+    case "catalog_invalid":
+      return {
+        title: "Invalid catalog",
+        message,
+        hint: "Fix catalog.json at the repo root (currency + products).",
+      };
+    case "store_not_configured":
+      return {
+        title: "Store not configured",
+        message,
+        hint: "Set OP_STORE_RECEIVER_WALLET_URL in .env to your merchant receiving wallet.",
+      };
     case "session_not_found":
     case "invalid_session_state":
       return {
@@ -61,8 +79,4 @@ export function parseApiError(
         message,
       };
   }
-}
-
-export function formatMajorAmount(major: string, assetCode: string) {
-  return `${major} ${assetCode}`;
 }

@@ -1,13 +1,35 @@
+import { useEffect, useState } from "react";
 import PayCallback from "./PayCallback";
-import PayForm from "./PayForm";
+import Checkout from "./Checkout";
+import Storefront from "./Storefront";
 import "./App.css";
 
+function routePage(pathname: string) {
+  if (pathname.startsWith("/pay/callback")) return "callback";
+  if (pathname.startsWith("/checkout")) return "checkout";
+  return "store";
+}
+
 export default function App() {
-  const isCallback = window.location.pathname.startsWith("/pay/callback");
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const sync = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const page = routePage(pathname);
 
   return (
     <main className="app">
-      {isCallback ? <PayCallback /> : <PayForm />}
+      {page === "callback" ? (
+        <PayCallback />
+      ) : page === "checkout" ? (
+        <Checkout />
+      ) : (
+        <Storefront />
+      )}
     </main>
   );
 }

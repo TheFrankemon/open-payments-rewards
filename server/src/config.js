@@ -25,10 +25,31 @@ export function getConfig() {
         /\/$/,
         "",
       ),
+      storeReceiverWalletUrl: (
+        process.env.OP_STORE_RECEIVER_WALLET_URL ?? ""
+      ).replace(/\/$/, ""),
       keyId: (process.env.OP_KEY_ID ?? "").trim(),
       privateKeyPath: resolvePrivateKeyPath(process.env.OP_PRIVATE_KEY_PATH),
     },
     repoRoot,
+  };
+}
+
+/** Repo-root catalog.json (edit this file to change store products). */
+export function getCatalogPath() {
+  return resolve(getConfig().repoRoot, "catalog.json");
+}
+
+export function getCatalogReadiness() {
+  const catalogPath = getCatalogPath();
+  const catalogFile = existsSync(catalogPath);
+  return {
+    ready: catalogFile,
+    checks: { catalogFile },
+    catalogPath,
+    message: catalogFile
+      ? "catalog.json found."
+      : `Add catalog.json at repo root. Missing: ${catalogPath}`,
   };
 }
 

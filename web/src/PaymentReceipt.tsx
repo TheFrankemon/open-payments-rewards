@@ -1,5 +1,3 @@
-import { formatMajorAmount } from "./paymentUi";
-
 type Props = {
   amountMajor: string;
   assetCode: string;
@@ -23,7 +21,9 @@ export default function PaymentReceipt({
       <dl className="receipt-dl">
         <div>
           <dt>Amount</dt>
-          <dd>{formatMajorAmount(amountMajor, assetCode)}</dd>
+          <dd>
+            {amountMajor} {assetCode}
+          </dd>
         </div>
         <div>
           <dt>Receiver</dt>
@@ -35,7 +35,7 @@ export default function PaymentReceipt({
         </div>
       </dl>
       <a className="secondary-button" href="/">
-        Make another payment
+        Back to store
       </a>
     </section>
   );

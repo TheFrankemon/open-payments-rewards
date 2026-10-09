@@ -1,16 +1,25 @@
 # Open Payments Rewards
 
-Learning project: pay a wallet address via Open Payments (**SGD** on [interledger-test.dev](https://wallet.interledger-test.dev/) ), then evolve into 2% cashback rewards.
+Demo store with Open Payments checkout in **SGD** ([interledger-test.dev](https://wallet.interledger-test.dev/)), evolving toward 2% cashback rewards.
 
-## Milestone 1 complete (M6)
+## Milestone 2 — R1 (current)
 
-End-to-end SGD pay flow:
+- **Store** (`/`) — products from [`catalog.json`](catalog.json), cart
+- **Checkout** (`/checkout`) — cart total → same `/api/payments` flow as Milestone 1
+- **Merchant receiver** — `OP_STORE_RECEIVER_WALLET_URL` in `.env` (not entered in the UI)
 
-1. **Pay** — incoming payment + quote + redirect to wallet
-2. Approve outgoing grant in the test wallet
-3. **Callback** — completes transfer and shows receipt (amount, receiver, outgoing payment id)
+### Catalog
 
-Errors show actionable hints (grant not approved, session expired, OP misconfiguration, etc.).
+Edit **[`catalog.json`](catalog.json)** at the repo root to add or change products. Served at `GET /api/store` (re-read on each request — refresh the store page after edits).
+
+### Env
+
+```bash
+OP_WALLET_ADDRESS_URL=...      # payer / signing client
+OP_STORE_RECEIVER_WALLET_URL=... # required — merchant receives checkout payments
+OP_KEY_ID=...
+# private.key
+```
 
 ### Run
 
@@ -19,10 +28,9 @@ npm install && cd web && npm install && cd ../server && npm install && cd ..
 npm run dev
 ```
 
-### Next (Milestone 2 — rewards)
+### Next
 
-- **R1:** Product catalog + checkout
-- **R2:** 2% SGD rewards ledger
+- **R2:** 2% SGD rewards ledger after paid checkout
 - **R3:** Rewards UI
 
 ## References

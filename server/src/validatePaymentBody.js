@@ -30,12 +30,22 @@ export function validatePaymentBody(body) {
     fields.amount = "Amount must be a number greater than zero.";
   }
 
-  const receiverWalletUrl =
+  const receiverFromBody =
     typeof body?.receiverWalletUrl === "string"
       ? body.receiverWalletUrl.trim().replace(/\/$/, "")
       : "";
+  const receiverWalletUrl =
+    receiverFromBody || getConfig().openPayments.storeReceiverWalletUrl;
   const receiverError = walletUrlError(receiverWalletUrl, "Receiver wallet URL");
-  if (receiverError) fields.receiverWalletUrl = receiverError;
+  if (receiverError) {
+    if (receiverFromBody) {
+      fields.receiverWalletUrl = receiverError;
+    } else {
+      throw new ValidationError(
+        "Store receiver wallet is not configured. Set OP_STORE_RECEIVER_WALLET_URL in .env.",
+      );
+    }
+  }
 
   const payerWalletUrl = getConfig().openPayments.walletAddressUrl;
   if (walletUrlError(payerWalletUrl, "Payer wallet URL")) {

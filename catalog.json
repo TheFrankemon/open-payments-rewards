@@ -1,0 +1,23 @@
+{
+  "currency": "SGD",
+  "products": [
+    {
+      "id": "kopitiam-tea",
+      "name": "Kopitiam Tea",
+      "description": "Hot tea — demo item for testnet checkout.",
+      "priceMajor": "2.50"
+    },
+    {
+      "id": "open-payments-sticker",
+      "name": "OP Sticker Pack",
+      "description": "Three Interledger stickers (virtual goods).",
+      "priceMajor": "5.00"
+    },
+    {
+      "id": "dev-lunch",
+      "name": "Dev Lunch Voucher",
+      "description": "SGD lunch credit at the merchant wallet.",
+      "priceMajor": "12.00"
+    }
+  ]
+}

@@ -2,22 +2,40 @@
   "currency": "SGD",
   "products": [
     {
-      "id": "kopitiam-tea",
-      "name": "Kopitiam Tea",
-      "description": "Hot tea — demo item for testnet checkout.",
+      "id": "burrito-xxl",
+      "name": "Burrito XXL",
+      "description": "Legendary street food. Hot, messy, unmistakably Night City.",
       "priceMajor": "2.50"
     },
     {
-      "id": "open-payments-sticker",
-      "name": "OP Sticker Pack",
-      "description": "Three Interledger stickers (virtual goods).",
+      "id": "braindance-corpo-rat",
+      "name": "BD: The Corpo-Rat",
+      "description": "Single-use braindance chip — virtual goods, no warranty.",
       "priceMajor": "5.00"
     },
     {
-      "id": "dev-lunch",
-      "name": "Dev Lunch Voucher",
-      "description": "SGD lunch credit at the merchant wallet.",
+      "id": "trauma-team-starter",
+      "name": "Trauma Team Starter",
+      "description": "Basic emergency response tier. Arrival not guaranteed in combat zones.",
       "priceMajor": "12.00"
+    },
+    {
+      "id": "sandevistan-mk2",
+      "name": "Sandevistan Mk.2 Module",
+      "description": "Reflex booster cyberware — demo SKU for testnet checkout.",
+      "priceMajor": "24.99"
+    },
+    {
+      "id": "maxtac-hoodie",
+      "name": "MaxTac Hoodie",
+      "description": "Streetwear with psych squad insignia. No ballistic rating.",
+      "priceMajor": "8.50"
+    },
+    {
+      "id": "synth-lungs",
+      "name": "Synth-Lungs Booster",
+      "description": "Filter the smog. Breathe like a corpo for five minutes.",
+      "priceMajor": "3.75"
     }
   ]
 }

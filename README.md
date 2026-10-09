@@ -16,6 +16,7 @@ Use the **buyer** key for `OP_KEY_ID` / `private.key`. Use the **rewards pool** 
 
 - **Store** (`/`) — products from [`catalog.json`](catalog.json), cart
 - **Checkout** (`/checkout`) — cart total → Open Payments purchase to the merchant wallet
+- **Rewards** (`/rewards`) — SGD cashback balance (paid / pending / earned) and ledger history
 - **Callback** — completes payment, records order in SQLite, pays **2% SGD cashback** from the rewards wallet to the buyer wallet
 
 ### Catalog
@@ -24,8 +25,8 @@ Edit **[`catalog.json`](catalog.json)** at the repo root. Served at `GET /api/st
 
 ### Rewards API (R2)
 
-- `GET /api/rewards/summary?wallet=` — earned / paid / pending cashback totals
-- `GET /api/rewards/history?wallet=` — ledger entries  
+- `GET /api/rewards` — summary + history (buyer wallet from env unless `?wallet=`)
+- `GET /api/rewards/summary` · `GET /api/rewards/history` — same data split  
 - Ledger file: `rewards.sqlite` at repo root (gitignored)
 
 Cashback is **2% of the cart total in SGD**, paid from `fkmn-rewards`. On testnet the rewards wallet needs a **second wallet approval** after checkout — use **Approve SGD cashback in wallet** on the receipt, then return via `/pay/rewards-callback`.
@@ -50,10 +51,6 @@ node scripts/verify-op-keys.mjs   # compares PEM ↔ jwks ↔ .env
 Errors like **invalid signature** or **could not determine client** almost always mean `keyId` ≠ `kid` on that wallet’s `jwks.json`, or the wrong PEM file.
 
 Note: `fkmnrw-2` is **USD** on testnet; `fkmn-rewards` is **SGD** (cashback). The merchant wallet `e21287fb` is **EUR**.
-
-### Next
-
-- **R3:** Rewards balance/history UI
 
 ## References
 

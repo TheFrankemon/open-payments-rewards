@@ -361,3 +361,76 @@
     transform: rotate(360deg);
   }
 }
+
+.store-nav {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.rewards-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 520px) {
+  .rewards-totals {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rewards-total-card {
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.rewards-total-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.rewards-total-value {
+  margin: 0.35rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.rewards-history-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rewards-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.rewards-status-paid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.rewards-status-awaiting_approval,
+.rewards-status-pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.rewards-status-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}

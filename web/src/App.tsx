@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PayCallback from "./PayCallback";
 import Checkout from "./Checkout";
+import Rewards from "./Rewards";
 import Storefront from "./Storefront";
 import "./App.css";
 
@@ -8,6 +9,7 @@ function routePage(pathname: string) {
   if (pathname.startsWith("/pay/rewards-callback")) return "rewards-callback";
   if (pathname.startsWith("/pay/callback")) return "callback";
   if (pathname.startsWith("/checkout")) return "checkout";
+  if (pathname.startsWith("/rewards")) return "rewards";
   return "store";
 }
 
@@ -28,6 +30,8 @@ export default function App() {
         <PayCallback />
       ) : page === "checkout" ? (
         <Checkout />
+      ) : page === "rewards" ? (
+        <Rewards />
       ) : (
         <Storefront />
       )}

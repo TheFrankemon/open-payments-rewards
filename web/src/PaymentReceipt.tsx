@@ -1,3 +1,5 @@
+import { onSpaLinkClick } from "./nav";
+
 type RewardsInfo = {
   status: string;
   cashbackMajor?: string;
@@ -95,6 +97,13 @@ export default function PaymentReceipt({
           Approve SGD cashback in wallet
         </a>
       ) : null}
+      <a
+        className="secondary-button secondary-button-inline"
+        href="/rewards"
+        onClick={onSpaLinkClick}
+      >
+        View rewards balance
+      </a>
       <a className="secondary-button" href="/">
         Back to store
       </a>

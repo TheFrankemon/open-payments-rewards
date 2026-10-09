@@ -10,21 +10,40 @@ import { completeOrderCashback } from "../rewards/processCheckoutRewards.js";
 
 export const rewardsRouter = Router();
 
-function normalizeWalletUrl(raw) {
-  if (typeof raw !== "string" || !raw.trim()) return "";
-  return raw.trim().replace(/\/$/, "");
+function buyerWallet(req) {
+  const wallet =
+    (typeof req.query.wallet === "string" ? req.query.wallet.trim() : "") ||
+    getConfig().openPayments.walletAddressUrl;
+  return wallet ? wallet.replace(/\/$/, "") : "";
 }
 
-rewardsRouter.get("/summary", (req, res) => {
-  const wallet =
-    normalizeWalletUrl(req.query.wallet) ||
-    getConfig().openPayments.walletAddressUrl;
+function requireBuyerWallet(req, res) {
+  const wallet = buyerWallet(req);
   if (!wallet) {
-    return res.status(400).json({
+    res.status(400).json({
       error: "validation_error",
       message: "Pass ?wallet= or set OP_WALLET_ADDRESS_URL (buyer wallet).",
     });
+    return "";
   }
+  return wallet;
+}
+
+rewardsRouter.get("/", (req, res) => {
+  const wallet = requireBuyerWallet(req, res);
+  if (!wallet) return;
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  return res.json({
+    ...getBuyerRewardsSummary(wallet),
+    entries: getBuyerCashbackHistory(wallet, limit).filter(
+      (e) => e.status !== "skipped",
+    ),
+  });
+});
+
+rewardsRouter.get("/summary", (req, res) => {
+  const wallet = requireBuyerWallet(req, res);
+  if (!wallet) return;
   return res.json(getBuyerRewardsSummary(wallet));
 });
 
@@ -68,15 +87,8 @@ rewardsRouter.post("/orders/:orderId/complete-cashback", async (req, res) => {
 });
 
 rewardsRouter.get("/history", (req, res) => {
-  const wallet =
-    normalizeWalletUrl(req.query.wallet) ||
-    getConfig().openPayments.walletAddressUrl;
-  if (!wallet) {
-    return res.status(400).json({
-      error: "validation_error",
-      message: "Pass ?wallet= or set OP_WALLET_ADDRESS_URL (buyer wallet).",
-    });
-  }
+  const wallet = requireBuyerWallet(req, res);
+  if (!wallet) return;
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   return res.json({
     buyerWalletUrl: wallet,

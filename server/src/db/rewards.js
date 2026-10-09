@@ -213,7 +213,8 @@ export function getBuyerCashbackHistory(buyerWalletUrl, limit = 50) {
   return database
     .prepare(
       `SELECT id, order_id, cashback_minor, asset_code, asset_scale,
-              status, payout_outgoing_payment_id, error_message, created_at
+              status, payout_outgoing_payment_id, error_message,
+              interact_redirect, created_at
        FROM cashback_ledger
        WHERE buyer_wallet_url = ?
        ORDER BY id DESC

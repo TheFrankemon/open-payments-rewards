@@ -1,6 +1,6 @@
-import { onSpaLinkClick } from "./nav";
 import { useStore } from "./storeContext";
 import StatusPanel from "./StatusPanel";
+import StoreNav from "./StoreNav";
 
 export default function Storefront() {
   const { products, currency, storeLoading, error, addProduct, itemCount } =
@@ -36,13 +36,7 @@ export default function Storefront() {
             Demo shop — prices in {currency}, pay via Open Payments.
           </p>
         </div>
-        <a
-          className={`cart-link${itemCount > 0 ? " cart-link-active" : ""}`}
-          href="/checkout"
-          onClick={onSpaLinkClick}
-        >
-          Checkout{itemCount > 0 ? ` (${itemCount})` : ""}
-        </a>
+        <StoreNav active="store" itemCount={itemCount} />
       </header>
 
       <ul className="product-list">

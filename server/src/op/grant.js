@@ -83,3 +83,40 @@ export async function requestInteractiveOutgoingGrant(
     continueAccessToken: outgoingPaymentGrant.continue.access_token.value,
   };
 }
+
+export async function completeOutgoingPayment(client, session, interactRef) {
+  if (!interactRef) {
+    throw new Error("Missing interact_ref from wallet redirect.");
+  }
+
+  const finalizedGrant = await client.grant.continue(
+    {
+      url: session.grantContinueUri,
+      accessToken: session.grantContinueAccessToken,
+    },
+    { interact_ref: interactRef },
+  );
+
+  if (!isFinalizedGrant(finalizedGrant)) {
+    const err = new Error(
+      "Outgoing grant was not finalized. Approve the grant in your wallet first.",
+    );
+    err.name = "GrantNotFinalizedError";
+    throw err;
+  }
+
+  const payerWallet = await client.walletAddress.get({
+    url: session.payerWalletUrl,
+  });
+
+  return client.outgoingPayment.create(
+    {
+      url: payerWallet.resourceServer,
+      accessToken: finalizedGrant.access_token.value,
+    },
+    {
+      walletAddress: payerWallet.id,
+      quoteId: session.quoteId,
+    },
+  );
+}

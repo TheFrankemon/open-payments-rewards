@@ -1,16 +1,14 @@
 # Open Payments Rewards
 
-Learning project: pay a wallet address via Open Payments, then evolve into 2% cashback rewards.
+Learning project: pay a wallet address via Open Payments ( **SGD** on [interledger-test.dev](https://wallet.interledger-test.dev/) ), then evolve into 2% cashback rewards.
 
-## Milestone 4 (current)
+## Milestone 5 (current)
 
-Pay flow through **quote + interactive outgoing grant**:
+After wallet approval, **`/pay/callback`** calls `POST /api/payments/:sessionId/complete` with `interact_ref` → `grant.continue` + `outgoingPayment.create`.
 
-1. `POST /api/payments` — incoming payment on receiver (payer = `OP_WALLET_ADDRESS_URL` on the server)
-2. `POST /api/payments/:sessionId/outgoing-grant` — quote on payer wallet, pending outgoing grant
-3. Browser redirects to **`interactRedirect`** — **HALT:** approve in your [test wallet](https://wallet.interledger-test.dev/) (payer account must be funded)
-
-Grant finish URL: `{WEB_PUBLIC_URL}/pay/callback?sessionId=…` (M5 will call `grant.continue` + outgoing payment there).
+1. Pay form → incoming payment → quote → wallet redirect (M3–M4)
+2. Approve grant in test wallet (**HALT** if you skip this — complete returns `grant_not_finalized`)
+3. Callback auto-completes transfer; success shows amount in **SGD**
 
 ### Run
 
@@ -21,8 +19,7 @@ npm run dev
 
 ### Next
 
-- **M5:** `POST /api/payments/:sessionId/complete` after wallet callback
-- **M6:** Success and error UI
+- **M6:** Polish success/error states on pay + callback flows
 
 ## References
 

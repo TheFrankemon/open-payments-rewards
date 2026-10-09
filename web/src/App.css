@@ -66,6 +66,26 @@
   background: #fff;
 }
 
+.amount-input-wrap {
+  position: relative;
+}
+
+.amount-input-wrap input {
+  width: 100%;
+  padding-right: 3.25rem;
+}
+
+.amount-suffix {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  pointer-events: none;
+}
+
 .field input:focus {
   outline: 2px solid #6366f1;
   outline-offset: 1px;

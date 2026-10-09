@@ -3,6 +3,7 @@ import { OpenPaymentsClientError } from "@interledger/open-payments";
 import { ValidationError } from "../amount.js";
 import { getConfig, getOpenPaymentsReadiness } from "../config.js";
 import {
+  completeOutgoingPayment,
   createQuoteForIncomingPayment,
   requestInteractiveOutgoingGrant,
 } from "../op/grant.js";
@@ -129,6 +130,77 @@ paymentsRouter.post("/:sessionId/outgoing-grant", async (req, res) => {
       interactRedirect: grant.interactRedirect,
     });
   } catch (err) {
+    return sendPaymentError(res, err);
+  }
+});
+
+paymentsRouter.post("/:sessionId/complete", async (req, res) => {
+  if (!getOpenPaymentsReadiness().ready) {
+    return res.status(503).json({
+      error: "open_payments_not_configured",
+      message: "Configure Open Payments in .env before creating payments.",
+    });
+  }
+
+  try {
+    const session = getPaymentSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({
+        error: "session_not_found",
+        message: "Payment session not found or expired.",
+      });
+    }
+    if (session.status !== "pending_grant") {
+      return res.status(409).json({
+        error: "invalid_session_state",
+        message: `Session status is "${session.status}", expected "pending_grant".`,
+      });
+    }
+
+    const interactRef =
+      typeof req.body?.interactRef === "string"
+        ? req.body.interactRef
+        : typeof req.query?.interact_ref === "string"
+          ? req.query.interact_ref
+          : "";
+
+    const client = await getOpenPaymentsClient();
+    const outgoingPayment = await completeOutgoingPayment(
+      client,
+      session,
+      interactRef,
+    );
+
+    updatePaymentSession(session.id, {
+      status: "paid",
+      outgoingPaymentId: outgoingPayment.id,
+    });
+
+    return res.json({
+      status: "paid",
+      sessionId: session.id,
+      outgoingPaymentId: outgoingPayment.id,
+      amount: {
+        major: session.amountMajor,
+        minor: session.amountMinor,
+        assetCode: session.assetCode,
+        assetScale: session.assetScale,
+      },
+      receiverWalletUrl: session.receiverWalletUrl,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "GrantNotFinalizedError") {
+      return res.status(409).json({
+        error: "grant_not_finalized",
+        message: err.message,
+      });
+    }
+    if (err instanceof Error && err.message.includes("interact_ref")) {
+      return res.status(400).json({
+        error: "missing_interact_ref",
+        message: err.message,
+      });
+    }
     return sendPaymentError(res, err);
   }
 });

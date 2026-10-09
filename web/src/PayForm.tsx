@@ -85,18 +85,25 @@ export default function PayForm() {
       <form className="pay-form" onSubmit={handleSubmit} noValidate>
         <label className="field">
           <span>Amount</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="10.00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, amount: true }))}
-            aria-invalid={Boolean(showError("amount"))}
-            aria-describedby={showError("amount") ? "amount-error" : undefined}
-            disabled={loading}
-          />
+          <div className="amount-input-wrap">
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="1.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, amount: true }))}
+              aria-invalid={Boolean(showError("amount"))}
+              aria-describedby={
+                showError("amount") ? "amount-error" : undefined
+              }
+              disabled={loading}
+            />
+            <span className="amount-suffix" aria-hidden="true">
+              SGD
+            </span>
+          </div>
           {showError("amount") ? (
             <p id="amount-error" className="field-error" role="alert">
               {showError("amount")}

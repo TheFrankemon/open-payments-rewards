@@ -22,18 +22,15 @@ export function validatePayForm(values: PayFormValues): PayFormErrors {
   if (!receiver) {
     errors.receiverWalletUrl = "Enter a receiver wallet URL.";
   } else {
-    let parsed: URL;
     try {
-      parsed = new URL(receiver);
+      const parsed = new URL(receiver);
+      if (parsed.protocol !== "https:") {
+        errors.receiverWalletUrl = "Wallet URL must start with https:// (not $).";
+      } else if (parsed.pathname.endsWith("/")) {
+        errors.receiverWalletUrl = "Remove the trailing slash from the URL.";
+      }
     } catch {
       errors.receiverWalletUrl = "Use a valid URL (https://…).";
-      return errors;
-    }
-    if (parsed.protocol !== "https:") {
-      errors.receiverWalletUrl = "Wallet URL must start with https:// (not $).";
-    }
-    if (parsed.pathname.endsWith("/")) {
-      errors.receiverWalletUrl = "Remove the trailing slash from the URL.";
     }
   }
 

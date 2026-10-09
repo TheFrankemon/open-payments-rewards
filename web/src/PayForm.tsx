@@ -5,38 +5,15 @@ import {
   validatePayForm,
 } from "./validation";
 
-const defaultReceiver =
-  import.meta.env.VITE_DEFAULT_RECEIVER_URL?.trim() ?? "";
-
-type PaymentSessionResponse = {
-  sessionId: string;
-  status: string;
-  amount: {
-    major: string;
-    minor: string;
-    assetCode: string;
-    assetScale: number;
-  };
-  receiverWalletUrl: string;
-  incomingPaymentId: string;
-};
-
-type ApiErrorBody = {
-  error?: string;
-  message?: string;
-  fields?: Partial<Record<keyof PayFormValues, string>>;
-};
-
 export default function PayForm() {
   const [amount, setAmount] = useState("");
-  const [receiverWalletUrl, setReceiverWalletUrl] = useState(defaultReceiver);
+  const [receiverWalletUrl, setReceiverWalletUrl] = useState("");
   const [touched, setTouched] = useState<
     Partial<Record<keyof PayFormValues, boolean>>
   >({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [session, setSession] = useState<PaymentSessionResponse | null>(null);
 
   const values: PayFormValues = useMemo(
     () => ({ amount, receiverWalletUrl }),
@@ -54,14 +31,13 @@ export default function PayForm() {
     event.preventDefault();
     setSubmitAttempted(true);
     setApiError(null);
-    setSession(null);
 
     const nextErrors = validatePayForm(values);
     if (!isValidPayForm(nextErrors)) return;
 
     setLoading(true);
     try {
-      const response = await fetch("/api/payments", {
+      const createRes = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -69,18 +45,23 @@ export default function PayForm() {
           receiverWalletUrl: values.receiverWalletUrl.trim(),
         }),
       });
-
-      const body = (await response.json()) as
-        | PaymentSessionResponse
-        | ApiErrorBody;
-
-      if (!response.ok) {
-        const err = body as ApiErrorBody;
-        setApiError(err.message ?? "Payment request failed.");
+      const createBody = await createRes.json();
+      if (!createRes.ok) {
+        setApiError(createBody.message ?? "Could not create incoming payment.");
         return;
       }
 
-      setSession(body as PaymentSessionResponse);
+      const grantRes = await fetch(
+        `/api/payments/${createBody.sessionId}/outgoing-grant`,
+        { method: "POST" },
+      );
+      const grantBody = await grantRes.json();
+      if (!grantRes.ok) {
+        setApiError(grantBody.message ?? "Could not start wallet approval.");
+        return;
+      }
+
+      window.location.assign(grantBody.interactRedirect);
     } catch {
       setApiError(
         "Could not reach the API. Run npm run dev from the repo root (web + server).",
@@ -93,11 +74,11 @@ export default function PayForm() {
   return (
     <div className="pay-layout">
       <header className="pay-header">
-        <p className="eyebrow">Milestone 3</p>
+        <p className="eyebrow">Milestone 4</p>
         <h1>Pay with Open Payments</h1>
         <p className="lede">
-          Creates an incoming payment on the receiver wallet (Open Payments
-          steps 1–2). Quote and wallet approval come in M4–M5.
+          Creates an incoming payment, quotes the debit from this app&apos;s
+          wallet, then redirects you to approve the outgoing grant.
         </p>
       </header>
 
@@ -128,7 +109,7 @@ export default function PayForm() {
           <input
             type="url"
             autoComplete="off"
-            placeholder="https://wallet.interledger-test.dev/username"
+            placeholder="https://wallet.interledger-test.dev/merchant"
             value={receiverWalletUrl}
             onChange={(e) => setReceiverWalletUrl(e.target.value)}
             onBlur={() =>
@@ -148,7 +129,7 @@ export default function PayForm() {
         </label>
 
         <button type="submit" className="pay-button" disabled={loading}>
-          {loading ? "Creating incoming payment…" : "Pay"}
+          {loading ? "Working…" : "Pay"}
         </button>
       </form>
 
@@ -156,36 +137,6 @@ export default function PayForm() {
         <section className="preview preview-error" aria-live="polite">
           <h2>Could not start payment</h2>
           <p className="hint">{apiError}</p>
-        </section>
-      ) : null}
-
-      {session ? (
-        <section className="preview" aria-live="polite">
-          <h2>Incoming payment created</h2>
-          <dl>
-            <div>
-              <dt>Session</dt>
-              <dd className="mono">{session.sessionId}</dd>
-            </div>
-            <div>
-              <dt>Amount</dt>
-              <dd>
-                {session.amount.major} {session.amount.assetCode} (
-                {session.amount.minor} minor units)
-              </dd>
-            </div>
-            <div>
-              <dt>Receiver</dt>
-              <dd className="mono">{session.receiverWalletUrl}</dd>
-            </div>
-            <div>
-              <dt>Incoming payment</dt>
-              <dd className="mono">{session.incomingPaymentId}</dd>
-            </div>
-          </dl>
-          <p className="hint">
-            M4 will add quote + wallet redirect using this session.
-          </p>
         </section>
       ) : null}
     </div>

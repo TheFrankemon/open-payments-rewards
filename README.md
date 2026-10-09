@@ -2,44 +2,29 @@
 
 Learning project: pay a wallet address via Open Payments, then evolve into 2% cashback rewards.
 
-## Milestone 3 (current)
+## Milestone 4 (current)
 
-**Incoming payment on the receiver wallet** — `POST /api/payments` runs Open Payments grant + `incomingPayment.create` (example steps 1–2). Sessions are stored in memory until M4 adds quote and outgoing grant.
+Pay flow through **quote + interactive outgoing grant**:
 
-### Prerequisites
+1. `POST /api/payments` — incoming payment on receiver (payer = `OP_WALLET_ADDRESS_URL` on the server)
+2. `POST /api/payments/:sessionId/outgoing-grant` — quote on payer wallet, pending outgoing grant
+3. Browser redirects to **`interactRedirect`** — **HALT:** approve in your [test wallet](https://wallet.interledger-test.dev/) (payer account must be funded)
 
-Node **20+** (see `web/.nvmrc`). Volta pins **20.15.0** in `package.json`.
+Grant finish URL: `{WEB_PUBLIC_URL}/pay/callback?sessionId=…` (M5 will call `grant.continue` + outgoing payment there).
 
-Open Payments credentials in repo-root `.env` (see `.env.example`). Readiness:
-
-```bash
-curl -s http://localhost:5173/api/open-payments/readiness
-```
-
-### Install and run
+### Run
 
 ```bash
 npm install && cd web && npm install && cd ../server && npm install && cd ..
 npm run dev
 ```
 
-Submit the pay form or:
+### Next
 
-```bash
-curl -s -X POST http://localhost:5173/api/payments \
-  -H 'Content-Type: application/json' \
-  -d '{"amount":"1.00","receiverWalletUrl":"https://wallet.interledger-test.dev/YOUR_USER"}'
-```
-
-Expect `201` with `sessionId` and `incomingPaymentId`.
-
-### Next steps
-
-- **M4:** Quote + interactive outgoing grant; return `interact.redirect` (**halt** — approve in wallet).
-- **M5–M6:** Callback, complete payment, success UI.
+- **M5:** `POST /api/payments/:sessionId/complete` after wallet callback
+- **M6:** Success and error UI
 
 ## References
 
-- [Open Payments test wallet](https://wallet.interledger-test.dev/)
 - [SDK setup](https://openpayments.dev/sdk/before-you-begin/)
-- [Payment example flow](https://github.com/interledger/open-payments-example/blob/main/index.js)
+- [Example payment flow](https://github.com/interledger/open-payments-example/blob/main/index.js)

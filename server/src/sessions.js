@@ -15,3 +15,10 @@ export function createPaymentSession(record) {
 export function getPaymentSession(sessionId) {
   return sessions.get(sessionId);
 }
+
+export function updatePaymentSession(sessionId, patch) {
+  const session = sessions.get(sessionId);
+  if (!session) return undefined;
+  Object.assign(session, patch);
+  return session;
+}

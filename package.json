@@ -1,0 +1,16 @@
+{
+  "name": "open-payments-rewards",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Open Payments pay form and rewards demo",
+  "engines": {
+    "node": ">=20"
+  },
+  "volta": {
+    "node": "20.15.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --prefix web",
+    "build": "npm run build --prefix web"
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import PaymentReceipt from "./PaymentReceipt";
 import StatusPanel from "./StatusPanel";
 import { parseApiError } from "./paymentUi";
+import { useStore } from "./storeContext";
 
 type CompletePaymentResponse = {
   status: string;
@@ -42,6 +43,7 @@ export default function PayCallback() {
   const orderId = params.get("orderId");
   const interactRef = params.get("interact_ref");
   const started = useRef(false);
+  const { clearCart } = useStore();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ReturnType<typeof parseApiError> | null>(
@@ -118,6 +120,7 @@ export default function PayCallback() {
         } else if (isRewards) {
           setCashback((body as CompleteRewardsResponse).rewards);
         } else {
+          clearCart();
           setPaid(body as CompletePaymentResponse);
         }
       } catch {
@@ -133,7 +136,7 @@ export default function PayCallback() {
         setLoading(false);
       }
     })();
-  }, [isGrantSetup, isRewards, sessionId, orderId, interactRef]);
+  }, [isGrantSetup, isRewards, sessionId, orderId, interactRef, clearCart]);
 
   if (loading) {
     return (

@@ -125,7 +125,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [quantities, productById],
   );
 
+  const itemCount = useMemo(
+    () => lines.reduce((n, line) => n + line.quantity, 0),
+    [lines],
+  );
+
   const storedItemCount = sumQuantities(quantities);
+
+  useEffect(() => {
+    if (storeLoading || products.length === 0) return;
+    setQuantities((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(prev)) {
+        if (qty > 0 && productById.has(id)) next[id] = qty;
+        else if (qty > 0) changed = true;
+      }
+      if (!changed) return prev;
+      writeStoredQuantities(next);
+      return next;
+    });
+  }, [storeLoading, products.length, productById]);
 
   const value = useMemo((): StoreContextValue => {
     const cartSyncing =
@@ -137,7 +157,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       products,
       receiverWalletUrl: payload?.receiverWalletUrl?.trim() || null,
       lines,
-      itemCount: storedItemCount,
+      itemCount,
       cartSyncing,
       totalMajor: cartTotalMajor(lines),
       addProduct(productId) {
@@ -170,6 +190,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     payload,
     products,
     lines,
+    itemCount,
     storedItemCount,
   ]);
 

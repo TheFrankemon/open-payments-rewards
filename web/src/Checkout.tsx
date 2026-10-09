@@ -8,6 +8,7 @@ import { onSpaLinkClick } from "./nav";
 import { parseApiError } from "./paymentUi";
 import { useStore } from "./storeContext";
 import StatusPanel from "./StatusPanel";
+import StoreNav from "./StoreNav";
 
 export default function Checkout() {
   const {
@@ -104,11 +105,14 @@ export default function Checkout() {
 
   return (
     <div className="pay-layout">
-      <header className="pay-header">
-        <h1>Checkout</h1>
-        <p className="lede">
-          Pay {totalMajor} {currency} to the merchant via Open Payments.
-        </p>
+      <header className="pay-header store-header">
+        <div>
+          <h1>Checkout</h1>
+          <p className="lede">
+            Pay {totalMajor} {currency} to the merchant via Open Payments.
+          </p>
+        </div>
+        <StoreNav active="store" itemCount={itemCount} />
       </header>
 
       <section className="pay-form checkout-summary">
